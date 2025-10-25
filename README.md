@@ -57,7 +57,7 @@ docker build -t weight-tracker-app .
 # 运行容器
 docker run -d \
   --name weight-tracker-app \
-  -p 3000:3000 \
+  -p 3135:3000 \
   -v weight-tracker-data:/app/data \
   --restart unless-stopped \
   weight-tracker-app
@@ -76,8 +76,8 @@ npm start
 ## 访问应用
 
 部署完成后，通过以下地址访问：
-- Web界面：http://localhost:3000
-- API接口：http://localhost:3000/api
+- Web界面：http://localhost:3135
+- API接口：http://localhost:3135/api
 
 ## 数据管理
 
@@ -96,7 +96,7 @@ npm start
 
 ```env
 # 应用端口
-PORT=3000
+PORT=3135
 
 # 环境模式
 NODE_ENV=production
@@ -137,7 +137,7 @@ NODE_ENV=production
 
 如遇到问题，请：
 1. 查看容器日志：`docker-compose logs -f`
-2. 检查端口占用：`netstat -tlnp | grep 3000`
+2. 检查端口占用：`netstat -tlnp | grep 3135`
 3. 确认数据卷挂载：`docker volume inspect weight-tracker-data`
 
 ## 许可证
@@ -208,7 +208,7 @@ docker build -t weight-tracker-app .
 # Running the container
 docker run -d \
   --name weight-tracker-app \
-  -p 3000:3000 \
+  -p 3135:3000 \
 -v weight-tracker-data:/app/data \
   --restart unless-stopped \
   weight-tracker-app
