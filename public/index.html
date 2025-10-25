@@ -1,0 +1,2757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-lang="app_title">减肥记录追踪 | 云端同步版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#10B981',
+                        accent: '#F59E0B',
+                        danger: '#EF4444',
+                        success: '#059669',
+                        warning: '#D97706',
+                        info: '#0EA5E9',
+                        dark: '#1F2937',
+                        light: '#F8FAFC'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'PingFang SC', 'Microsoft YaHei', 'sans-serif']
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out',
+                        'slide-up': 'slideUp 0.6s ease-out',
+                        'scale-in': 'scaleIn 0.4s ease-out',
+                        'bounce-subtle': 'bounceSubtle 2s infinite',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'float': 'float 3s ease-in-out infinite'
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        scaleIn: {
+                            '0%': { opacity: '0', transform: 'scale(0.95)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' }
+                        },
+                        bounceSubtle: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-5px)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .glass-effect {
+                backdrop-filter: blur(16px);
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .gradient-text {
+                background: linear-gradient(135deg, #3B82F6, #10B981);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+            }
+            .card-hover {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .card-hover:hover {
+                transform: translateY(-8px);
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            }
+            .progress-bar {
+                background: linear-gradient(90deg, #10B981, #059669);
+                transition: width 1s ease-in-out;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .hover-scale {
+                transition: transform 0.2s ease-in-out;
+            }
+            .hover-scale:hover {
+                transform: scale(1.05);
+            }
+        }
+        
+        /* 暗黑模式样式 */
+        .dark {
+            --tw-bg-opacity: 1;
+            background-color: rgb(15 23 42 / var(--tw-bg-opacity));
+        }
+        
+        .dark .card-hover {
+            background-color: rgb(30 41 59 / var(--tw-bg-opacity));
+            border-color: rgb(51 65 85 / var(--tw-border-opacity));
+        }
+        
+        .dark .gradient-text {
+            background: linear-gradient(135deg, #60A5FA, #34D399);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+</head>
+<body class="font-inter bg-gradient-to-br from-slate-50 via-blue-50 to-green-50 dark:from-slate-900 dark:via-blue-900 dark:to-green-900 min-h-screen transition-colors duration-300">
+    <!-- 认证模态框 -->
+    <div id="auth-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full">
+            <div class="p-6 border-b border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 id="auth-modal-title" data-lang="login_title" class="text-xl font-bold text-gray-900 dark:text-white">登录</h3>
+                    <button onclick="closeAuthModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="flex justify-center mb-6">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
+                        <i class="fa fa-heartbeat text-white text-2xl"></i>
+                    </div>
+                </div>
+                
+                <!-- 登录表单 -->
+                <div id="login-form">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="username_label">用户名</label>
+                            <input 
+                                type="text" 
+                                id="login-username" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="请输入用户名"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="password_label">密码</label>
+                            <input 
+                                type="password" 
+                                id="login-password" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="请输入密码"
+                                required
+                            >
+                        </div>
+                        <button 
+                            onclick="login()" 
+                            class="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                        >
+                            <i class="fa fa-sign-in mr-2"></i>
+                            <span data-lang="login_button">登录</span>
+                        </button>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span class="text-gray-600 dark:text-gray-400" data-lang="no_account">还没有账号？</span>
+                        <button onclick="switchToRegister()" class="text-primary hover:text-primary/80 font-medium">
+                            <span data-lang="register_now">立即注册</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 注册表单 -->
+                <div id="register-form" class="hidden">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="username_label">用户名</label>
+                            <input 
+                                type="text" 
+                                id="register-username" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="请输入用户名"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="password_label">密码</label>
+                            <input 
+                                type="password" 
+                                id="register-password" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="请输入密码"
+                                required
+                            >
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="email_label">邮箱 (可选)</label>
+                            <input 
+                                type="email" 
+                                id="register-email" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="请输入邮箱"
+                            >
+                        </div>
+                        <button 
+                            onclick="register()" 
+                            class="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                        >
+                            <i class="fa fa-user-plus mr-2"></i>
+                            <span data-lang="register_button">注册</span>
+                        </button>
+                    </div>
+                    <div class="mt-4 text-center">
+                        <span class="text-gray-600 dark:text-gray-400" data-lang="have_account">已有账号？</span>
+                        <button onclick="switchToLogin()" class="text-primary hover:text-primary/80 font-medium">
+                            <span data-lang="login_now">立即登录</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 导航栏 -->
+    <nav class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md shadow-lg sticky top-0 z-40 border-b border-gray-200/50 dark:border-slate-700/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fa fa-heartbeat text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold gradient-text">减肥记录追踪</h1>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">云端同步版</p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center space-x-6">
+                    <button onclick="showSection('dashboard')" class="nav-btn text-gray-700 dark:text-gray-300 hover:text-primary transition-colors font-medium">
+                        <i class="fa fa-dashboard mr-2"></i>
+                        <span data-lang="dashboard">仪表盘</span>
+                    </button>
+                    <button onclick="showSection('record')" class="nav-btn text-gray-700 dark:text-gray-300 hover:text-primary transition-colors font-medium">
+                        <i class="fa fa-plus-circle mr-2"></i>
+                        <span data-lang="record_weight">记录体重</span>
+                    </button>
+                    <button onclick="showSection('history')" class="nav-btn text-gray-700 dark:text-gray-300 hover:text-primary transition-colors font-medium">
+                        <i class="fa fa-history mr-2"></i>
+                        <span data-lang="history">历史记录</span>
+                    </button>
+                    <button onclick="showSection('settings')" class="nav-btn text-gray-700 dark:text-gray-300 hover:text-primary transition-colors font-medium">
+                        <i class="fa fa-bullseye mr-2"></i>
+                        <span data-lang="settings">设置</span>
+                    </button>
+                    <div class="flex items-center space-x-4">
+                        <!-- 语言选择 -->
+                        <select id="language-select" onchange="changeLanguage(this.value)" class="text-sm border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded px-2 py-1 focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="zh-CN">简体中文</option>
+                            <option value="zh-TW">繁体中文</option>
+                            <option value="en">English</option>
+                        </select>
+                        <!-- 主题切换 -->
+                        <button onclick="toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors">
+                            <i id="theme-icon" class="fa fa-moon-o text-lg"></i>
+                        </button>
+                        <div class="flex items-center space-x-2">
+                            <span id="current-username" class="text-sm text-gray-600 dark:text-gray-400">未登录</span>
+                            <button onclick="logout()" class="text-gray-500 dark:text-gray-400 hover:text-danger dark:hover:text-danger transition-colors">
+                                <i class="fa fa-sign-out"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <button class="md:hidden" onclick="toggleMobileMenu()">
+                    <i class="fa fa-bars text-gray-700 dark:text-gray-300 text-xl"></i>
+                </button>
+            </div>
+        </div>
+        <!-- 移动端菜单 -->
+        <div id="mobileMenu" class="md:hidden bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 hidden">
+            <div class="px-4 py-2 space-y-2">
+                <button onclick="showSection('dashboard')" class="block w-full text-left py-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                    <i class="fa fa-dashboard mr-2"></i>
+                    <span data-lang="dashboard">仪表盘</span>
+                </button>
+                <button onclick="showSection('record')" class="block w-full text-left py-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                    <i class="fa fa-plus-circle mr-2"></i>
+                    <span data-lang="record_weight">记录体重</span>
+                </button>
+                <button onclick="showSection('history')" class="block w-full text-left py-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                    <i class="fa fa-history mr-2"></i>
+                    <span data-lang="history">历史记录</span>
+                </button>
+                <button onclick="showSection('settings')" class="block w-full text-left py-2 text-gray-700 dark:text-gray-300 hover:text-primary transition-colors">
+                    <i class="fa fa-bullseye mr-2"></i>
+                    <span data-lang="settings">设置</span>
+                </button>
+                <div class="pt-2 border-t border-gray-200 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">语言/Language:</span>
+                        <select id="mobile-language-select" onchange="changeLanguage(this.value)" class="text-xs border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded px-2 py-1">
+                            <option value="zh-CN">简体中文</option>
+                            <option value="zh-TW">繁体中文</option>
+                            <option value="en">English</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-sm text-gray-600 dark:text-gray-400">主题/Theme:</span>
+                        <button onclick="toggleTheme()" class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                            <i id="mobile-theme-icon" class="fa fa-moon-o"></i>
+                        </button>
+                    </div>
+                    <span class="text-sm text-gray-600 dark:text-gray-400">
+                        <span data-lang="current_user">当前用户:</span> <span id="mobile-username">未登录</span>
+                    </span>
+                    <button onclick="logout()" class="block w-full text-left py-2 text-danger hover:text-danger/80 transition-colors">
+                        <i class="fa fa-sign-out mr-2"></i>
+                        <span data-lang="logout">退出登录</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容区域 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- 仪表盘页面 -->
+        <section id="dashboard" class="section-content animate-fade-in">
+            <!-- 欢迎区域 -->
+            <div class="bg-gradient-to-r from-primary to-secondary rounded-2xl shadow-xl p-8 mb-8 text-white">
+                <div class="flex flex-col lg:flex-row items-center justify-between">
+                    <div class="mb-6 lg:mb-0">
+                        <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-2 text-shadow">
+                            <span data-lang="welcome_back">欢迎回来，</span><span id="welcome-username">减肥达人</span>！
+                        </h2>
+                        <p class="text-white/90 text-lg mb-4" data-lang="keep_recording">
+                            坚持记录，见证每一步的进步
+                        </p>
+                        <div class="flex items-center space-x-4">
+                            <div class="text-center">
+                                <div class="text-2xl font-bold" id="current-streak">0</div>
+                                <div class="text-sm text-white/80" data-lang="consecutive_days">连续记录天数</div>
+                            </div>
+                            <div class="text-center">
+                                <div class="text-2xl font-bold" id="total-days">0</div>
+                                <div class="text-sm text-white/80" data-lang="total_days">总记录天数</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-4 animate-float">
+                            <i class="fa fa-trophy text-4xl text-yellow-300"></i>
+                        </div>
+                        <div class="text-lg font-semibold" data-lang="keep_going">继续加油！</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 核心数据卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- 当前体重 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 card-hover border border-gray-100 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                            <i class="fa fa-bullseye text-primary text-xl"></i>
+                        </div>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" id="current-date">--</span>
+                    </div>
+                    <h3 class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2" data-lang="current_weight">当前体重</h3>
+                    <div class="flex items-end space-x-2">
+                        <span class="text-3xl font-bold text-gray-900 dark:text-white" id="current-weight">--</span>
+                        <span class="text-gray-500 dark:text-gray-400 mb-1">斤</span>
+                    </div>
+                    <div class="mt-3 flex items-center space-x-2">
+                        <span id="weight-change" class="text-sm font-medium">--</span>
+                        <span class="text-xs text-gray-500 dark:text-gray-400" data-lang="vs_yesterday">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- 已减重量 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 card-hover border border-gray-100 dark:border-slate-700">
+                    <div class="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fa fa-arrow-down text-secondary text-xl"></i>
+                    </div>
+                    <h3 class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2" data-lang="weight_lost">已减重量</h3>
+                    <div class="flex items-end space-x-2">
+                        <span class="text-3xl font-bold text-secondary" id="total-lost">--</span>
+                        <span class="text-gray-500 dark:text-gray-400 mb-1">斤</span>
+                    </div>
+                    <div class="mt-3">
+                        <div class="text-xs text-gray-500 dark:text-gray-400 mb-1" data-lang="completion">完成度</div>
+                        <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                            <div id="progress-bar" class="progress-bar h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="progress-text" class="text-xs text-gray-500 dark:text-gray-400 mt-1">0%</span>
+                    </div>
+                </div>
+
+                <!-- 还需减重 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 card-hover border border-gray-100 dark:border-slate-700">
+                    <div class="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fa fa-bullseye text-accent text-xl"></i>
+                    </div>
+                    <h3 class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2" data-lang="remaining_weight">还需减重</h3>
+                    <div class="flex items-end space-x-2">
+                        <span class="text-3xl font-bold text-accent" id="remaining">--</span>
+                        <span class="text-gray-500 dark:text-gray-400 mb-1">斤</span>
+                    </div>
+                    <div class="mt-3">
+                        <span class="text-xs text-gray-500 dark:text-gray-400" data-lang="target_weight">目标体重：</span>
+                        <span id="target-weight" class="text-xs font-medium text-gray-900 dark:text-white">-- 斤</span>
+                    </div>
+                </div>
+
+                <!-- 平均每周减重 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 card-hover border border-gray-100 dark:border-slate-700">
+                    <div class="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
+                        <i class="fa fa-calendar text-purple-600 text-xl"></i>
+                    </div>
+                    <h3 class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2" data-lang="weekly_average">平均每周减重</h3>
+                    <div class="flex items-end space-x-2">
+                        <span class="text-3xl font-bold text-purple-600" id="weekly-average">--</span>
+                        <span class="text-gray-500 dark:text-gray-400 mb-1">斤</span>
+                    </div>
+                    <div class="mt-3">
+                        <span id="pace-indicator" class="text-xs font-medium">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 图表区域 -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- 体重趋势图 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-lang="weight_trend">体重趋势</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="changeChartPeriod('all')" class="chart-period-btn text-xs px-3 py-1 rounded-full bg-primary text-white">
+                                <span data-lang="all_time">全部</span>
+                            </button>
+                            <button onclick="changeChartPeriod('month')" class="chart-period-btn text-xs px-3 py-1 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300">
+                                <span data-lang="one_month">1个月</span>
+                            </button>
+                            <button onclick="changeChartPeriod('week')" class="chart-period-btn text-xs px-3 py-1 rounded-full bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-300">
+                                <span data-lang="one_week">1周</span>
+                            </button>
+                        </div>
+                    </div>
+                    <!-- 日期选择器 -->
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm text-gray-600 dark:text-gray-400" data-lang="custom_date_range">自定义日期范围</span>
+                        </div>
+                        <div class="flex space-x-3">
+                            <input 
+                                type="date" 
+                                id="start-date" 
+                                class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                            >
+                            <span class="self-center text-gray-500 dark:text-gray-400">至</span>
+                            <input 
+                                type="date" 
+                                id="end-date" 
+                                class="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                            >
+                            <button onclick="applyDateRange()" class="px-3 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors">
+                                <i class="fa fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="h-64">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 每周减重统计 -->
+                <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6" data-lang="weekly_weight_loss">每周减重统计</h3>
+                    <div class="h-64">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 近期记录 -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white" data-lang="recent_records">近期记录</h3>
+                    <button onclick="showSection('history')" class="text-primary hover:text-primary/80 text-sm font-medium transition-colors">
+                        <span data-lang="view_all">查看全部</span> <i class="fa fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200 dark:border-slate-700">
+                                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-lang="date">日期</th>
+                                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-lang="weight">体重(斤)</th>
+                                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-lang="change">变化</th>
+                                <th class="text-left py-3 px-4 text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider" data-lang="bmi">BMI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-records" class="divide-y divide-gray-100 dark:divide-slate-700">
+                            <!-- 记录将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 记录体重页面 -->
+        <section id="record" class="section-content animate-slide-up hidden">
+            <div class="max-w-2xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4" data-lang="record_today_weight">记录今日体重</h2>
+                    <p class="text-gray-600 dark:text-gray-400" data-lang="keep_daily_record">坚持每日记录，见证减肥成果</p>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-gray-100 dark:border-slate-700">
+                    <form id="weight-form" class="space-y-6">
+                        <div class="text-center mb-8">
+                            <div class="w-20 h-20 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                <i class="fa fa-bullseye text-white text-2xl"></i>
+                            </div>
+                            <div class="text-gray-600 dark:text-gray-400 mb-2" data-lang="today_is">今天是</div>
+                            <div class="text-xl font-semibold text-gray-900 dark:text-white" id="today-date"></div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="today_weight">
+                                今日体重 (斤)
+                            </label>
+                            <div class="relative">
+                                <input 
+                                    type="number" 
+                                    id="weight-input" 
+                                    step="0.1" 
+                                    min="80" 
+                                    max="300"
+                                    class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-xl font-medium"
+                                    placeholder="请输入今日体重"
+                                    required
+                                >
+                                <div class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400">
+                                    斤
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="today_feeling">
+                                今日感受
+                            </label>
+                            <select id="feeling-select" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200">
+                                <option value="">请选择今日感受</option>
+                                <option value="great" data-lang="feeling_great">感觉很棒</option>
+                                <option value="good" data-lang="feeling_good">感觉不错</option>
+                                <option value="normal" data-lang="feeling_normal">感觉一般</option>
+                                <option value="tired" data-lang="feeling_tired">感觉疲惫</option>
+                                <option value="hungry" data-lang="feeling_hungry">感觉饥饿</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="notes_optional">
+                                备注 (可选)
+                            </label>
+                            <textarea 
+                                id="notes-input" 
+                                rows="3" 
+                                class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                placeholder="记录今日的运动、饮食或其他想法..."
+                            ></textarea>
+                        </div>
+
+                        <div class="pt-4">
+                            <button 
+                                type="submit" 
+                                class="w-full bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-medium hover:shadow-lg transform hover:scale-105 transition-all duration-200 focus:outline-none focus:ring-4 focus:ring-primary/20"
+                            >
+                                <i class="fa fa-check mr-2"></i>
+                                <span data-lang="record_weight_button">记录体重</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 快速统计 -->
+                <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-secondary" id="quick-total-lost">--</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="weight_lost">已减重量</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-primary" id="quick-current">--</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="current_weight">当前体重</div>
+                    </div>
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-xl p-4 text-center">
+                        <div class="text-2xl font-bold text-accent" id="quick-remaining">--</div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="remaining_weight">还需减重</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 历史记录页面 -->
+        <section id="history" class="section-content animate-slide-up hidden">
+            <div class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4" data-lang="history_records">历史记录</h2>
+                <p class="text-gray-600 dark:text-gray-400" data-lang="view_all_records">查看所有体重记录和减重历程</p>
+            </div>
+
+            <!-- 筛选和搜索 -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 mb-8 border border-gray-100 dark:border-slate-700">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="date_range">日期范围</label>
+                        <select id="date-filter" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="all" data-lang="all_time">全部时间</option>
+                            <option value="week" data-lang="recent_7_days">最近7天</option>
+                            <option value="month" data-lang="recent_30_days">最近30天</option>
+                            <option value="quarter" data-lang="recent_3_months">最近3个月</option>
+                            <option value="year" data-lang="recent_1_year">最近1年</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="sort_by">排序方式</label>
+                        <select id="sort-filter" class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="newest" data-lang="newest_first">最新记录在前</option>
+                            <option value="oldest" data-lang="oldest_first">最早记录在前</option>
+                            <option value="highest" data-lang="weight_highest_to_lowest">体重从高到低</option>
+                            <option value="lowest" data-lang="weight_lowest_to_highest">体重从低到高</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="search_notes">搜索备注</label>
+                        <div class="relative">
+                            <input 
+                                type="text" 
+                                id="search-notes" 
+                                placeholder="搜索备注内容..." 
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent pl-10"
+                            >
+                            <i class="fa fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl p-6 text-center">
+                    <div class="text-2xl font-bold text-primary" id="history-total-days">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="total_days">总记录天数</div>
+                </div>
+                <div class="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/30 rounded-xl p-6 text-center">
+                    <div class="text-2xl font-bold text-secondary" id="history-total-lost">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="total_weight_lost">累计减重(斤)</div>
+                </div>
+                <div class="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl p-6 text-center">
+                    <div class="text-2xl font-bold text-purple-600" id="history-best-week">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="best_weekly_loss">最佳单周减重(斤)</div>
+                </div>
+                <div class="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/30 dark:to-orange-800/30 rounded-xl p-6 text-center">
+                    <div class="text-2xl font-bold text-accent" id="history-current-streak">0</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400" data-lang="current_streak">当前连续记录(天)</div>
+                </div>
+            </div>
+
+            <!-- 历史记录表格 -->
+            <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-100 dark:border-slate-700 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 dark:bg-slate-700">
+                            <tr>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="date">日期</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="weight">体重(斤)</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="change">较昨日</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="bmi">BMI</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="feeling">感受</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="notes">备注</th>
+                                <th class="text-left py-4 px-6 text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider" data-lang="actions">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-records" class="divide-y divide-gray-100 dark:divide-slate-700">
+                            <!-- 历史记录将通过JavaScript动态生成 -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="no-records" class="text-center py-12 text-gray-500 dark:text-gray-400">
+                    <i class="fa fa-calendar-o text-4xl mb-4"></i>
+                    <p data-lang="no_records">还没有记录数据</p>
+                    <p class="text-sm mt-2" data-lang="click_to_record">点击"记录体重"开始追踪你的减肥之旅</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 设置页面 -->
+        <section id="settings" class="section-content animate-slide-up hidden">
+            <div class="max-w-4xl mx-auto">
+                <div class="mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-4" data-lang="settings">设置</h2>
+                    <p class="text-gray-600 dark:text-gray-400" data-lang="personalize_experience">个性化你的减肥追踪体验</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- 个人信息 -->
+                    <div class="lg:col-span-2 space-y-8">
+                        <!-- 基本信息 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <i class="fa fa-bullseye text-primary mr-3"></i>
+                                <span data-lang="basic_info">基本信息</span>
+                            </h3>
+                            <form id="profile-form" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="height_cm">
+                                            身高 (cm)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            id="height-input" 
+                                            min="100" 
+                                            max="250"
+                                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                            placeholder="请输入身高"
+                                            required
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="gender">
+                                            性别
+                                        </label>
+                                        <select id="gender-select" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200">
+                                            <option value="male" data-lang="male">男</option>
+                                            <option value="female" data-lang="female">女</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 减肥目标 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <i class="fa fa-bullseye text-secondary mr-3"></i>
+                                <span data-lang="weight_loss_goal">减肥目标</span>
+                            </h3>
+                            <form id="goal-form" class="space-y-6">
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="initial_weight">
+                                            初始体重 (斤)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            id="initial-weight-input" 
+                                            step="0.1" 
+                                            min="80" 
+                                            max="300"
+                                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                            placeholder="请输入初始体重"
+                                            required
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="target_weight">
+                                            目标体重 (斤)
+                                        </label>
+                                        <input 
+                                            type="number" 
+                                            id="target-weight-input" 
+                                            step="0.1" 
+                                            min="80" 
+                                            max="300"
+                                            class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200"
+                                            placeholder="请输入目标体重"
+                                            required
+                                        >
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="target_achievement_time">
+                                        目标达成时间
+                                    </label>
+                                    <select id="target-date-select" class="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200">
+                                        <option value="3" data-lang="3_months">3个月</option>
+                                        <option value="6" data-lang="6_months">6个月</option>
+                                        <option value="12" data-lang="12_months">12个月</option>
+                                        <option value="18" data-lang="18_months">18个月</option>
+                                        <option value="24" data-lang="24_months">24个月</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- 提醒设置 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <i class="fa fa-bell text-accent mr-3"></i>
+                                <span data-lang="reminder_settings">提醒设置</span>
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300" data-lang="daily_record_reminder">每日记录提醒</label>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400" data-lang="remind_daily_record">每天提醒你记录体重</p>
+                                    </div>
+                                    <button id="reminder-toggle" class="w-12 h-6 bg-gray-200 dark:bg-slate-700 rounded-full relative transition-all duration-200">
+                                        <div class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-all duration-200"></div>
+                                    </button>
+                                </div>
+                                <div id="reminder-time-container" class="hidden pl-4 border-l-2 border-gray-200 dark:border-slate-700">
+                                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2" data-lang="reminder_time">提醒时间</label>
+                                    <input 
+                                        type="time" 
+                                        id="reminder-time" 
+                                        class="px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    >
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 主题设置 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <i class="fa fa-moon-o text-purple-600 mr-3"></i>
+                                <span data-lang="theme_settings">主题设置</span>
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300" data-lang="theme_mode">主题模式</label>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400" data-lang="choose_theme_mode">选择应用的显示主题</p>
+                                    </div>
+                                    <div class="flex space-x-2">
+                                        <button onclick="setTheme('light')" class="theme-btn w-8 h-8 bg-gray-100 dark:bg-gray-300 rounded-lg flex items-center justify-center hover:shadow-md transition-all duration-200">
+                                            <i class="fa fa-sun-o text-yellow-500"></i>
+                                        </button>
+                                        <button onclick="setTheme('dark')" class="theme-btn w-8 h-8 bg-gray-800 dark:bg-gray-900 rounded-lg flex items-center justify-center hover:shadow-md transition-all duration-200">
+                                            <i class="fa fa-moon-o text-blue-300"></i>
+                                        </button>
+                                        <button onclick="setTheme('auto')" class="theme-btn w-8 h-8 bg-gray-600 dark:bg-gray-700 rounded-lg flex items-center justify-center hover:shadow-md transition-all duration-200">
+                                            <i class="fa fa-bullseye text-green-300"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 语言设置 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center">
+                                <i class="fa fa-globe text-blue-600 mr-3"></i>
+                                <span data-lang="language_settings">语言设置</span>
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300" data-lang="language">语言</label>
+                                        <p class="text-xs text-gray-500 dark:text-gray-400" data-lang="choose_language">选择应用的显示语言</p>
+                                    </div>
+                                    <select id="settings-language-select" onchange="changeLanguage(this.value)" class="px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                        <option value="zh-CN">简体中文</option>
+                                        <option value="zh-TW">繁体中文</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 侧边栏 -->
+                    <div class="space-y-6">
+                        <!-- 数据管理 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" data-lang="data_management">数据管理</h3>
+                            <div class="space-y-3">
+                                <button onclick="exportData()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 text-primary border border-primary dark:border-primary rounded-lg hover:bg-primary hover:text-white transition-all duration-200">
+                                    <i class="fa fa-download"></i>
+                                    <span data-lang="export_data">导出数据</span>
+                                </button>
+                                <button onclick="importData()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 text-secondary border border-secondary dark:border-secondary rounded-lg hover:bg-secondary hover:text-white transition-all duration-200">
+                                    <i class="fa fa-upload"></i>
+                                    <span data-lang="import_data">导入数据</span>
+                                </button>
+                                <button onclick="cloudBackup()" class="w-full flex items-center justify-center space-x-2 px-4 py-2 text-purple-600 border border-purple-600 dark:border-purple-600 rounded-lg hover:bg-purple-600 hover:text-white transition-all duration-200">
+                                    <i class="fa fa-cloud"></i>
+                                    <span data-lang="cloud_backup">云端备份</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 用户信息 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" data-lang="user_info">用户信息</h3>
+                            <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div data-lang="username">用户名: <span id="settings-username" class="font-medium text-gray-900 dark:text-white"></span></div>
+                                <div data-lang="login_status">登录状态: <span class="text-green-600 dark:text-green-400">已登录</span></div>
+                                <div class="pt-4">
+                                    <button onclick="logout()" class="w-full text-danger hover:text-danger/80 font-medium text-sm">
+                                        <i class="fa fa-sign-out mr-1"></i>
+                                        <span data-lang="logout">退出登录</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 应用信息 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" data-lang="app_info">应用信息</h3>
+                            <div class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                <div data-lang="version">版本: v1.0.0</div>
+                                <div data-lang="type">类型: 云端同步版</div>
+                                <div data-lang="database">数据库: SQLite</div>
+                                <div class="pt-4">
+                                    <button onclick="showAbout()" class="text-primary hover:text-primary/80 font-medium">
+                                        <span data-lang="about_app">关于本应用</span> <i class="fa fa-arrow-right ml-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 开源信息 -->
+                        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-4" data-lang="open_source">开源信息</h3>
+                            <div class="space-y-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                                        <i class="fa fa-github text-gray-800 dark:text-white text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <div class="font-medium text-gray-900 dark:text-white">GitHub</div>
+                                        <div class="text-xs text-gray-500 dark:text-gray-400">开源仓库</div>
+                                    </div>
+                                </div>
+                                <a href="https://github.com/zzzerol/weight-tracker" target="_blank" rel="noopener noreferrer" class="block w-full text-center py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                                    <i class="fa fa-external-link mr-2"></i>
+                                    <span data-lang="view_on_github">查看GitHub</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 底部导航 (移动端) -->
+    <div class="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 shadow-lg z-30">
+        <div class="flex justify-around items-center h-16">
+            <button onclick="showSection('dashboard')" class="mobile-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fa fa-dashboard text-lg mb-1"></i>
+                <span class="text-xs" data-lang="dashboard">仪表盘</span>
+            </button>
+            <button onclick="showSection('record')" class="mobile-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fa fa-plus-circle text-lg mb-1"></i>
+                <span class="text-xs" data-lang="record">记录</span>
+            </button>
+            <button onclick="showSection('history')" class="mobile-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fa fa-history text-lg mb-1"></i>
+                <span class="text-xs" data-lang="history">历史</span>
+            </button>
+            <button onclick="showSection('settings')" class="mobile-nav-btn flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                <i class="fa fa-bullseye text-lg mb-1"></i>
+                <span class="text-xs" data-lang="settings">设置</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="fixed top-20 right-4 bg-white dark:bg-slate-800 rounded-lg shadow-xl p-4 border-l-4 border-primary dark:border-primary transform translate-x-full transition-transform duration-300 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-primary/10 dark:bg-primary/20 rounded-full flex items-center justify-center">
+                <i class="fa fa-check text-primary"></i>
+            </div>
+            <div>
+                <div class="font-medium text-gray-900 dark:text-white" id="notification-title" data-lang="operation_success">操作成功</div>
+                <div class="text-sm text-gray-600 dark:text-gray-400" id="notification-message" data-lang="data_saved">数据已保存</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 模态框 -->
+    <div id="modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6 border-b border-gray-200 dark:border-slate-700">
+                <div class="flex items-center justify-between">
+                    <h3 id="modal-title" class="text-xl font-bold text-gray-900 dark:text-white">模态框标题</h3>
+                    <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+                        <i class="fa fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="modal-content" class="p-6">
+                <!-- 模态框内容 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 版权信息 -->
+    <footer class="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-700 py-6 mt-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center justify-between">
+                <div class="text-center md:text-left mb-4 md:mb-0">
+                    <p class="text-sm text-gray-600 dark:text-gray-400">
+                        <span data-lang="copyright">© 2025 版权所有</span> | 
+                        <span data-lang="owned_by">属于 zero</span>
+                    </p>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="https://github.com/zzzerol/weight-tracker" target="_blank" rel="noopener noreferrer" class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors">
+                        <i class="fa fa-github mr-1"></i>
+                        <span class="text-sm">GitHub</span>
+                    </a>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">v1.0.0</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 多语言支持
+        const translations = {
+            'zh-CN': {
+                app_title: '减肥记录追踪 | 云端同步版',
+                login_title: '登录',
+                username_label: '用户名',
+                password_label: '密码',
+                email_label: '邮箱',
+                login_button: '登录',
+                no_account: '还没有账号？',
+                register_now: '立即注册',
+                register_button: '注册',
+                have_account: '已有账号？',
+                login_now: '立即登录',
+                dashboard: '仪表盘',
+                record_weight: '记录体重',
+                history: '历史记录',
+                settings: '设置',
+                welcome_back: '欢迎回来，',
+                keep_recording: '坚持记录，见证每一步的进步',
+                consecutive_days: '连续记录天数',
+                total_days: '总记录天数',
+                keep_going: '继续加油！',
+                current_weight: '当前体重',
+                vs_yesterday: '较昨日',
+                weight_lost: '已减重量',
+                completion: '完成度',
+                remaining_weight: '还需减重',
+                target_weight: '目标体重：',
+                weekly_average: '平均每周减重',
+                weight_trend: '体重趋势',
+                all_time: '全部',
+                one_month: '1个月',
+                one_week: '1周',
+                custom_date_range: '自定义日期范围',
+                weekly_weight_loss: '每周减重统计',
+                recent_records: '近期记录',
+                view_all: '查看全部',
+                date: '日期',
+                weight: '体重',
+                change: '变化',
+                bmi: 'BMI',
+                record_today_weight: '记录今日体重',
+                keep_daily_record: '坚持每日记录，见证减肥成果',
+                today_is: '今天是',
+                today_weight: '今日体重',
+                today_feeling: '今日感受',
+                feeling_great: '感觉很棒',
+                feeling_good: '感觉不错',
+                feeling_normal: '感觉一般',
+                feeling_tired: '感觉疲惫',
+                feeling_hungry: '感觉饥饿',
+                notes_optional: '备注 (可选)',
+                record_weight_button: '记录体重',
+                history_records: '历史记录',
+                view_all_records: '查看所有体重记录和减重历程',
+                date_range: '日期范围',
+                sort_by: '排序方式',
+                recent_7_days: '最近7天',
+                recent_30_days: '最近30天',
+                recent_3_months: '最近3个月',
+                recent_1_year: '最近1年',
+                newest_first: '最新记录在前',
+                oldest_first: '最早记录在前',
+                weight_highest_to_lowest: '体重从高到低',
+                weight_lowest_to_highest: '体重从低到高',
+                search_notes: '搜索备注',
+                total_weight_lost: '累计减重(斤)',
+                best_weekly_loss: '最佳单周减重(斤)',
+                current_streak: '当前连续记录(天)',
+                feeling: '感受',
+                notes: '备注',
+                actions: '操作',
+                no_records: '还没有记录数据',
+                click_to_record: '点击"记录体重"开始追踪你的减肥之旅',
+                personalize_experience: '个性化你的减肥追踪体验',
+                basic_info: '基本信息',
+                height_cm: '身高 (cm)',
+                gender: '性别',
+                male: '男',
+                female: '女',
+                weight_loss_goal: '减肥目标',
+                initial_weight: '初始体重 (斤)',
+                target_achievement_time: '目标达成时间',
+                3_months: '3个月',
+                6_months: '6个月',
+                12_months: '12个月',
+                18_months: '18个月',
+                24_months: '24个月',
+                reminder_settings: '提醒设置',
+                daily_record_reminder: '每日记录提醒',
+                remind_daily_record: '每天提醒你记录体重',
+                reminder_time: '提醒时间',
+                theme_settings: '主题设置',
+                theme_mode: '主题模式',
+                choose_theme_mode: '选择应用的显示主题',
+                language_settings: '语言设置',
+                language: '语言',
+                choose_language: '选择应用的显示语言',
+                data_management: '数据管理',
+                export_data: '导出数据',
+                import_data: '导入数据',
+                cloud_backup: '云端备份',
+                user_info: '用户信息',
+                login_status: '登录状态',
+                logout: '退出登录',
+                app_info: '应用信息',
+                version: '版本',
+                type: '类型',
+                database: '数据库',
+                about_app: '关于本应用',
+                open_source: '开源信息',
+                view_on_github: '查看GitHub',
+                operation_success: '操作成功',
+                data_saved: '数据已保存',
+                copyright: '© 2025 版权所有',
+                owned_by: '属于 zero',
+                current_user: '当前用户:'
+            },
+            'zh-TW': {
+                app_title: '減肥記錄追蹤 | 雲端同步版',
+                login_title: '登入',
+                username_label: '使用者名稱',
+                password_label: '密碼',
+                email_label: '電子郵件',
+                login_button: '登入',
+                no_account: '還沒有帳號？',
+                register_now: '立即註冊',
+                register_button: '註冊',
+                have_account: '已有帳號？',
+                login_now: '立即登入',
+                dashboard: '儀表板',
+                record_weight: '記錄體重',
+                history: '歷史記錄',
+                settings: '設定',
+                welcome_back: '歡迎回來，',
+                keep_recording: '堅持記錄，見證每一步的進步',
+                consecutive_days: '連續記錄天數',
+                total_days: '總記錄天數',
+                keep_going: '繼續加油！',
+                current_weight: '當前體重',
+                vs_yesterday: '較昨日',
+                weight_lost: '已減重量',
+                completion: '完成度',
+                remaining_weight: '還需減重',
+                target_weight: '目標體重：',
+                weekly_average: '平均每週減重',
+                weight_trend: '體重趨勢',
+                all_time: '全部',
+                one_month: '1個月',
+                one_week: '1週',
+                custom_date_range: '自定義日期範圍',
+                weekly_weight_loss: '每週減重統計',
+                recent_records: '近期記錄',
+                view_all: '查看全部',
+                date: '日期',
+                weight: '體重',
+                change: '變化',
+                bmi: 'BMI',
+                record_today_weight: '記錄今日體重',
+                keep_daily_record: '堅持每日記錄，見證減肥成果',
+                today_is: '今天是',
+                today_weight: '今日體重',
+                today_feeling: '今日感受',
+                feeling_great: '感覺很棒',
+                feeling_good: '感覺不錯',
+                feeling_normal: '感覺一般',
+                feeling_tired: '感覺疲憊',
+                feeling_hungry: '感覺飢餓',
+                notes_optional: '備註 (可選)',
+                record_weight_button: '記錄體重',
+                history_records: '歷史記錄',
+                view_all_records: '查看所有體重記錄和減重歷程',
+                date_range: '日期範圍',
+                sort_by: '排序方式',
+                recent_7_days: '最近7天',
+                recent_30_days: '最近30天',
+                recent_3_months: '最近3個月',
+                recent_1_year: '最近1年',
+                newest_first: '最新記錄在前',
+                oldest_first: '最早記錄在前',
+                weight_highest_to_lowest: '體重從高到低',
+                weight_lowest_to_highest: '體重從低到高',
+                search_notes: '搜索備註',
+                total_weight_lost: '累計減重(斤)',
+                best_weekly_loss: '最佳單週減重(斤)',
+                current_streak: '當前連續記錄(天)',
+                feeling: '感受',
+                notes: '備註',
+                actions: '操作',
+                no_records: '還沒有記錄數據',
+                click_to_record: '點擊"記錄體重"開始追蹤你的減肥之旅',
+                personalize_experience: '個人化你的減肥追蹤體驗',
+                basic_info: '基本資訊',
+                height_cm: '身高 (cm)',
+                gender: '性別',
+                male: '男',
+                female: '女',
+                weight_loss_goal: '減肥目標',
+                initial_weight: '初始體重 (斤)',
+                target_achievement_time: '目標達成時間',
+                '3_months': '3個月',
+                '6_months': '6個月',
+                '12_months': '12個月',
+                '18_months': '18個月',
+                '24_months': '24個月',
+                reminder_settings: '提醒設定',
+                daily_record_reminder: '每日記錄提醒',
+                remind_daily_record: '每天提醒你記錄體重',
+                reminder_time: '提醒時間',
+                theme_settings: '主題設定',
+                theme_mode: '主題模式',
+                choose_theme_mode: '選擇應用的顯示主題',
+                language_settings: '語言設定',
+                language: '語言',
+                choose_language: '選擇應用的顯示語言',
+                data_management: '數據管理',
+                export_data: '匯出數據',
+                import_data: '匯入數據',
+                cloud_backup: '雲端備份',
+                user_info: '使用者資訊',
+                login_status: '登入狀態',
+                logout: '退出登入',
+                app_info: '應用資訊',
+                version: '版本',
+                type: '類型',
+                database: '資料庫',
+                about_app: '關於本應用',
+                open_source: '開源資訊',
+                view_on_github: '查看GitHub',
+                operation_success: '操作成功',
+                data_saved: '數據已儲存',
+                copyright: '© 2025 版權所有',
+                owned_by: '屬於 zero',
+                current_user: '當前使用者:'
+            },
+            'en': {
+                app_title: 'Weight Loss Tracker | Cloud Sync Version',
+                login_title: 'Login',
+                username_label: 'Username',
+                password_label: 'Password',
+                email_label: 'Email',
+                login_button: 'Login',
+                no_account: 'Don\'t have an account?',
+                register_now: 'Register Now',
+                register_button: 'Register',
+                have_account: 'Already have an account?',
+                login_now: 'Login Now',
+                dashboard: 'Dashboard',
+                record_weight: 'Record Weight',
+                history: 'History',
+                settings: 'Settings',
+                welcome_back: 'Welcome back,',
+                keep_recording: 'Keep recording to see your progress',
+                consecutive_days: 'Consecutive Days',
+                total_days: 'Total Days',
+                keep_going: 'Keep going!',
+                current_weight: 'Current Weight',
+                vs_yesterday: 'vs Yesterday',
+                weight_lost: 'Weight Lost',
+                completion: 'Completion',
+                remaining_weight: 'Remaining Weight',
+                target_weight: 'Target Weight:',
+                weekly_average: 'Weekly Average',
+                weight_trend: 'Weight Trend',
+                all_time: 'All',
+                one_month: '1 Month',
+                one_week: '1 Week',
+                custom_date_range: 'Custom Date Range',
+                weekly_weight_loss: 'Weekly Weight Loss',
+                recent_records: 'Recent Records',
+                view_all: 'View All',
+                date: 'Date',
+                weight: 'Weight',
+                change: 'Change',
+                bmi: 'BMI',
+                record_today_weight: 'Record Today\'s Weight',
+                keep_daily_record: 'Keep daily records to track your weight loss journey',
+                today_is: 'Today is',
+                today_weight: 'Today\'s Weight',
+                today_feeling: 'Today\'s Feeling',
+                feeling_great: 'Feeling Great',
+                feeling_good: 'Feeling Good',
+                feeling_normal: 'Feeling Normal',
+                feeling_tired: 'Feeling Tired',
+                feeling_hungry: 'Feeling Hungry',
+                notes_optional: 'Notes (Optional)',
+                record_weight_button: 'Record Weight',
+                history_records: 'History Records',
+                view_all_records: 'View all weight records and weight loss journey',
+                date_range: 'Date Range',
+                sort_by: 'Sort By',
+                recent_7_days: 'Last 7 Days',
+                recent_30_days: 'Last 30 Days',
+                recent_3_months: 'Last 3 Months',
+                recent_1_year: 'Last 1 Year',
+                newest_first: 'Newest First',
+                oldest_first: 'Oldest First',
+                weight_highest_to_lowest: 'Weight High to Low',
+                weight_lowest_to_highest: 'Weight Low to High',
+                search_notes: 'Search Notes',
+                total_weight_lost: 'Total Weight Lost(lbs)',
+                best_weekly_loss: 'Best Weekly Loss(lbs)',
+                current_streak: 'Current Streak(days)',
+                feeling: 'Feeling',
+                notes: 'Notes',
+                actions: 'Actions',
+                no_records: 'No records yet',
+                click_to_record: 'Click "Record Weight" to start your weight loss journey',
+                personalize_experience: 'Personalize your weight loss tracking experience',
+                basic_info: 'Basic Information',
+                height_cm: 'Height (cm)',
+                gender: 'Gender',
+                male: 'Male',
+                female: 'Female',
+                weight_loss_goal: 'Weight Loss Goal',
+                initial_weight: 'Initial Weight (lbs)',
+                target_achievement_time: 'Target Achievement Time',
+                '3_months': '3 Months',
+                '6_months': '6 Months',
+                '12_months': '12 Months',
+                '18_months': '18 Months',
+                '24_months': '24 Months',
+                reminder_settings: 'Reminder Settings',
+                daily_record_reminder: 'Daily Record Reminder',
+                remind_daily_record: 'Remind you to record weight daily',
+                reminder_time: 'Reminder Time',
+                theme_settings: 'Theme Settings',
+                theme_mode: 'Theme Mode',
+                choose_theme_mode: 'Choose app display theme',
+                language_settings: 'Language Settings',
+                language: 'Language',
+                choose_language: 'Choose app display language',
+                data_management: 'Data Management',
+                export_data: 'Export Data',
+                import_data: 'Import Data',
+                cloud_backup: 'Cloud Backup',
+                user_info: 'User Information',
+                login_status: 'Login Status',
+                logout: 'Logout',
+                app_info: 'App Information',
+                version: 'Version',
+                type: 'Type',
+                database: 'Database',
+                about_app: 'About This App',
+                open_source: 'Open Source',
+                view_on_github: 'View on GitHub',
+                operation_success: 'Operation Successful',
+                data_saved: 'Data Saved',
+                copyright: '© 2025 All Rights Reserved',
+                owned_by: 'Owned by zero',
+                current_user: 'Current User:'
+            }
+        };
+
+        // 全局变量
+        let currentLanguage = localStorage.getItem('language') || 'zh-CN';
+        let userSettings = {
+            height: 170,
+            gender: 'male',
+            initialWeight: 210,
+            targetWeight: 135,
+            targetMonths: 6,
+            reminderEnabled: false,
+            reminderTime: '20:00'
+        };
+        let weightRecords = [];
+        let currentChartPeriod = 'all'; // 默认显示全部时间
+        let weightChart = null;
+        let weeklyChart = null;
+        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
+        let currentUsername = localStorage.getItem('currentUsername');
+        let customDateRange = false;
+
+        // API配置
+        const API_BASE_URL = ''; // 相对路径
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            loadTheme();
+            changeLanguage(currentLanguage);
+            
+            if (authToken && currentUsername) {
+                currentUser = {
+                    username: currentUsername
+                };
+                updateUserInfo();
+                showSection('dashboard');
+                loadAllData();
+            } else {
+                showAuthModal('login');
+            }
+        }
+
+        function setupEventListeners() {
+            // 体重记录表单
+            document.getElementById('weight-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                recordWeight();
+            });
+
+            // 个人信息表单
+            document.getElementById('profile-form').addEventListener('change', updateSettings);
+            document.getElementById('goal-form').addEventListener('change', updateSettings);
+
+            // 筛选器
+            document.getElementById('date-filter').addEventListener('change', filterRecords);
+            document.getElementById('sort-filter').addEventListener('change', filterRecords);
+            document.getElementById('search-notes').addEventListener('input', filterRecords);
+
+            // 提醒开关
+            document.getElementById('reminder-toggle').addEventListener('click', toggleReminder);
+
+            // 页面滚动效果
+            window.addEventListener('scroll', handleScroll);
+
+            // 日期选择器变化
+            document.getElementById('start-date').addEventListener('change', function() {
+                updateEndDateMin();
+            });
+        }
+
+        // 多语言功能
+        function changeLanguage(lang) {
+            currentLanguage = lang;
+            localStorage.setItem('language', lang);
+            
+            // 更新所有带有data-lang属性的元素
+            document.querySelectorAll('[data-lang]').forEach(element => {
+                const key = element.getAttribute('data-lang');
+                if (translations[lang] && translations[lang][key]) {
+                    element.textContent = translations[lang][key];
+                }
+            });
+
+            // 更新页面标题
+            if (translations[lang] && translations[lang]['app_title']) {
+                document.title = translations[lang]['app_title'];
+            }
+
+            // 更新选择框选项
+            updateSelectOptions();
+
+            // 更新图表
+            if (weightChart) {
+                initializeCharts();
+            }
+        }
+
+        function updateSelectOptions() {
+            // 更新所有选择框的选项文本
+            document.querySelectorAll('select option[data-lang]').forEach(option => {
+                const key = option.getAttribute('data-lang');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    option.textContent = translations[currentLanguage][key];
+                }
+            });
+
+            // 更新语言选择器
+            document.getElementById('language-select').value = currentLanguage;
+            document.getElementById('mobile-language-select').value = currentLanguage;
+            document.getElementById('settings-language-select').value = currentLanguage;
+        }
+
+        // 主题切换功能
+        function toggleTheme() {
+            const body = document.body;
+            if (body.classList.contains('dark')) {
+                setTheme('light');
+            } else {
+                setTheme('dark');
+            }
+        }
+
+        function setTheme(theme) {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            const mobileThemeIcon = document.getElementById('mobile-theme-icon');
+            
+            body.classList.remove('light', 'dark');
+            
+            if (theme === 'auto') {
+                // 自动检测系统主题
+                if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                    body.classList.add('dark');
+                    themeIcon.className = 'fa fa-moon text-lg';
+                    mobileThemeIcon.className = 'fa fa-moon';
+                } else {
+                    body.classList.add('light');
+                    themeIcon.className = 'fa fa-sun-o text-lg';
+                    mobileThemeIcon.className = 'fa fa-sun-o';
+                }
+                localStorage.setItem('theme', 'auto');
+            } else if (theme === 'dark') {
+                body.classList.add('dark');
+                themeIcon.className = 'fa fa-moon text-lg';
+                mobileThemeIcon.className = 'fa fa-moon';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                body.classList.add('light');
+                themeIcon.className = 'fa fa-sun-o text-lg';
+                mobileThemeIcon.className = 'fa fa-sun-o';
+                localStorage.setItem('theme', 'light');
+            }
+
+            // 更新图表颜色
+            if (weightChart) {
+                initializeCharts();
+            }
+        }
+
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'auto';
+            setTheme(savedTheme);
+        }
+
+        // 认证相关
+        function showAuthModal(type = 'login') {
+            document.getElementById('auth-modal').classList.remove('hidden');
+            if (type === 'login') {
+                switchToLogin();
+            } else {
+                switchToRegister();
+            }
+        }
+
+        function closeAuthModal() {
+            document.getElementById('auth-modal').classList.add('hidden');
+        }
+
+        function switchToLogin() {
+            document.getElementById('auth-modal-title').textContent = translations[currentLanguage]['login_title'];
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('register-form').classList.add('hidden');
+        }
+
+        function switchToRegister() {
+            document.getElementById('auth-modal-title').textContent = translations[currentLanguage]['register_button'];
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        async function login() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || translations[currentLanguage]['login_failed'] || 'Login failed');
+                }
+
+                authToken = data.token;
+                currentUsername = data.username;
+                currentUser = { username: currentUsername };
+
+                localStorage.setItem('authToken', authToken);
+                localStorage.setItem('currentUsername', currentUsername);
+
+                closeAuthModal();
+                updateUserInfo();
+                showSection('dashboard');
+                loadAllData();
+
+                showNotification(translations[currentLanguage]['login_success'] || 'Login Successful', 
+                                `${translations[currentLanguage]['welcome_back'] || 'Welcome back'}, ${currentUsername}!`);
+            } catch (error) {
+                showNotification(translations[currentLanguage]['login_failed'] || 'Login Failed', error.message, 'error');
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('register-username').value;
+            const password = document.getElementById('register-password').value;
+            const email = document.getElementById('register-email').value;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password, email })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || translations[currentLanguage]['registration_failed'] || 'Registration failed');
+                }
+
+                showNotification(translations[currentLanguage]['registration_success'] || 'Registration Successful', 
+                                translations[currentLanguage]['account_created_please_login'] || 'Account created, please login');
+                switchToLogin();
+            } catch (error) {
+                showNotification(translations[currentLanguage]['registration_failed'] || 'Registration Failed', error.message, 'error');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUsername = null;
+            currentUser = null;
+            weightRecords = [];
+            userSettings = {
+                height: 170,
+                gender: 'male',
+                initialWeight: 210,
+                targetWeight: 135,
+                targetMonths: 6,
+                reminderEnabled: false,
+                reminderTime: '20:00'
+            };
+
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUsername');
+
+            updateUserInfo();
+            showAuthModal('login');
+        }
+
+        function updateUserInfo() {
+            const username = currentUsername || translations[currentLanguage]['not_logged_in'] || 'Not Logged In';
+            document.getElementById('current-username').textContent = username;
+            document.getElementById('mobile-username').textContent = username;
+            document.getElementById('welcome-username').textContent = username;
+            document.getElementById('settings-username').textContent = username;
+        }
+
+        // API调用工具函数
+        async function apiRequest(url, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`${API_BASE_URL}${url}`, options);
+                const responseData = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        // 认证失败，需要重新登录
+                        logout();
+                        throw new Error(translations[currentLanguage]['session_expired_please_login'] || 'Session expired, please login again');
+                    }
+                    throw new Error(responseData.error || translations[currentLanguage]['api_request_failed'] || 'API request failed');
+                }
+
+                return responseData;
+            } catch (error) {
+                showNotification(translations[currentLanguage]['error'] || 'Error', error.message, 'error');
+                throw error;
+            }
+        }
+
+        // 数据加载
+        async function loadAllData() {
+            try {
+                // 并行加载所有数据
+                const [settingsData, recordsData] = await Promise.all([
+                    apiRequest('/api/settings'),
+                    apiRequest('/api/records')
+                ]);
+
+                userSettings = { ...userSettings, ...settingsData };
+                weightRecords = recordsData || [];
+
+                updateFormFields();
+                updateDashboardStats();
+                updateRecentRecords();
+                initializeCharts();
+                updateHistoryStats();
+                filterRecords();
+                updateQuickStats();
+                updateDatePickers();
+            } catch (error) {
+                console.error('数据加载失败:', error);
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                const data = await apiRequest('/api/settings');
+                userSettings = { ...userSettings, ...data };
+                updateFormFields();
+                return data;
+            } catch (error) {
+                console.error('设置加载失败:', error);
+            }
+        }
+
+        async function loadRecords() {
+            try {
+                const data = await apiRequest('/api/records');
+                weightRecords = data || [];
+                return data;
+            } catch (error) {
+                console.error('记录加载失败:', error);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const data = await apiRequest('/api/stats');
+                return data;
+            } catch (error) {
+                console.error('统计数据加载失败:', error);
+            }
+        }
+
+        function updateFormFields() {
+            document.getElementById('height-input').value = userSettings.height;
+            document.getElementById('gender-select').value = userSettings.gender;
+            document.getElementById('initial-weight-input').value = userSettings.initial_weight;
+            document.getElementById('target-weight-input').value = userSettings.target_weight;
+            document.getElementById('target-date-select').value = userSettings.target_months;
+            document.getElementById('reminder-time').value = userSettings.reminder_time;
+            
+            updateReminderToggle();
+        }
+
+        // 更新日期选择器
+        function updateDatePickers() {
+            if (weightRecords.length === 0) return;
+
+            const firstDate = weightRecords[0].date;
+            const lastDate = weightRecords[weightRecords.length - 1].date;
+            
+            document.getElementById('start-date').min = firstDate;
+            document.getElementById('start-date').value = firstDate;
+            document.getElementById('end-date').min = firstDate;
+            document.getElementById('end-date').max = lastDate;
+            document.getElementById('end-date').value = lastDate;
+        }
+
+        function updateEndDateMin() {
+            const startDate = document.getElementById('start-date').value;
+            const endDateInput = document.getElementById('end-date');
+            
+            endDateInput.min = startDate;
+            if (endDateInput.value < startDate) {
+                endDateInput.value = startDate;
+            }
+        }
+
+        // 应用日期范围筛选
+        function applyDateRange() {
+            const startDate = document.getElementById('start-date').value;
+            const endDate = document.getElementById('end-date').value;
+            
+            if (!startDate || !endDate) {
+                showNotification(translations[currentLanguage]['error'] || 'Error', 
+                                translations[currentLanguage]['please_select_date_range'] || 'Please select date range', 'error');
+                return;
+            }
+
+            customDateRange = true;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-gray-300');
+            });
+
+            // 筛选数据并更新图表
+            const filteredRecords = weightRecords.filter(record => 
+                record.date >= startDate && record.date <= endDate
+            );
+            
+            updateWeightChart(filteredRecords);
+        }
+
+        // 页面导航
+        function showSection(sectionId) {
+            // 隐藏所有页面
+            document.querySelectorAll('.section-content').forEach(section => {
+                section.classList.add('hidden');
+            });
+            
+            // 显示目标页面
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // 更新导航状态
+            updateNavigation(sectionId);
+            
+            // 初始化页面内容
+            if (sectionId === 'dashboard') {
+                initializeDashboard();
+            } else if (sectionId === 'record') {
+                initializeRecordPage();
+            } else if (sectionId === 'history') {
+                initializeHistoryPage();
+            } else if (sectionId === 'settings') {
+                initializeSettingsPage();
+            }
+        }
+
+        function updateNavigation(activeSection) {
+            // 更新桌面端导航
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-primary', 'font-bold');
+                btn.classList.add('text-gray-700', 'dark:text-gray-300');
+            });
+            
+            // 更新移动端导航
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => {
+                btn.classList.remove('text-primary');
+                btn.classList.add('text-gray-500', 'dark:text-gray-400');
+            });
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // 仪表盘初始化
+        function initializeDashboard() {
+            updateDashboardStats();
+            updateRecentRecords();
+            initializeCharts();
+            updateDatePickers();
+        }
+
+        async function updateDashboardStats() {
+            try {
+                const stats = await loadStats();
+                
+                if (stats) {
+                    document.getElementById('current-weight').textContent = stats.current_weight.toFixed(1);
+                    document.getElementById('total-lost').textContent = stats.total_lost.toFixed(1);
+                    document.getElementById('remaining').textContent = stats.remaining.toFixed(1);
+                    document.getElementById('target-weight').textContent = userSettings.target_weight + ' ' + (currentLanguage === 'en' ? 'lbs' : '斤');
+                    document.getElementById('current-streak').textContent = stats.streak;
+                    document.getElementById('total-days').textContent = stats.total_days;
+                    document.getElementById('weekly-average').textContent = stats.weekly_average.toFixed(1);
+
+                    // 更新进度条
+                    const totalTarget = userSettings.initial_weight - userSettings.target_weight;
+                    const progress = totalTarget > 0 ? (stats.total_lost / totalTarget) * 100 : 0;
+                    document.getElementById('progress-bar').style.width = Math.min(100, progress) + '%';
+                    document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+
+                    // 更新体重变化
+                    if (weightRecords.length >= 2) {
+                        const lastRecord = weightRecords[weightRecords.length - 1];
+                        const prevRecord = weightRecords[weightRecords.length - 2];
+                        const change = lastRecord.weight - prevRecord.weight;
+                        const changeElement = document.getElementById('weight-change');
+                        
+                        if (change < 0) {
+                            changeElement.textContent = '↓ ' + Math.abs(change).toFixed(1) + (currentLanguage === 'en' ? 'lbs' : '斤');
+                            changeElement.className = 'text-sm font-medium text-secondary';
+                        } else if (change > 0) {
+                            changeElement.textContent = '↑ ' + change.toFixed(1) + (currentLanguage === 'en' ? 'lbs' : '斤');
+                            changeElement.className = 'text-sm font-medium text-danger';
+                        } else {
+                            changeElement.textContent = '→ 0' + (currentLanguage === 'en' ? 'lbs' : '斤');
+                            changeElement.className = 'text-sm font-medium text-gray-500 dark:text-gray-400';
+                        }
+                    }
+
+                    // 更新日期
+                    if (weightRecords.length > 0) {
+                        const currentRecord = weightRecords[weightRecords.length - 1];
+                        document.getElementById('current-date').textContent = formatDate(currentRecord.date);
+                    }
+
+                    // 更新进度指示器
+                    const paceIndicator = document.getElementById('pace-indicator');
+                    const expectedWeekly = (userSettings.initial_weight - userSettings.target_weight) / (userSettings.target_months * 4);
+                    
+                    if (stats.weekly_average >= expectedWeekly * 1.2) {
+                        paceIndicator.textContent = translations[currentLanguage]['progress_ahead'] || '进度超前 🏃‍♂️';
+                        paceIndicator.className = 'text-xs font-medium text-secondary';
+                    } else if (stats.weekly_average >= expectedWeekly * 0.8) {
+                        paceIndicator.textContent = translations[currentLanguage]['progress_normal'] || '进度正常 🚶‍♂️';
+                        paceIndicator.className = 'text-xs font-medium text-primary';
+                    } else {
+                        paceIndicator.textContent = translations[currentLanguage]['need_to_work_harder'] || '需要加油 💪';
+                        paceIndicator.className = 'text-xs font-medium text-accent';
+                    }
+                }
+            } catch (error) {
+                console.error('仪表盘数据更新失败:', error);
+            }
+        }
+
+        function updateRecentRecords() {
+            const container = document.getElementById('recent-records');
+            container.innerHTML = '';
+
+            if (weightRecords.length === 0) {
+                return;
+            }
+
+            // 显示最近7条记录
+            const recentRecords = weightRecords.slice(-7).reverse();
+            
+            recentRecords.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors';
+                
+                const previousRecord = weightRecords[weightRecords.findIndex(r => r.date === record.date) - 1];
+                const change = previousRecord ? record.weight - previousRecord.weight : 0;
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-sm text-gray-900 dark:text-white">${formatDate(record.date)}</td>
+                    <td class="py-3 px-4 text-sm font-medium text-gray-900 dark:text-white">${record.weight.toFixed(1)}</td>
+                    <td class="py-3 px-4 text-sm">
+                        <span class="${change < 0 ? 'text-secondary' : change > 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400'}">
+                            ${change < 0 ? '↓ ' + Math.abs(change).toFixed(1) : change > 0 ? '↑ ' + change.toFixed(1) : '→ 0'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 text-sm text-gray-500 dark:text-gray-400">${calculateBMI(record.weight).toFixed(1)}</td>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+
+        function initializeCharts() {
+            if (weightRecords.length < 2) {
+                return;
+            }
+
+            initializeWeightChart();
+            initializeWeeklyChart();
+        }
+
+        function initializeWeightChart(data = null) {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+            
+            if (weightChart) {
+                weightChart.destroy();
+            }
+
+            let chartData = data || weightRecords;
+            
+            // 根据时间周期筛选数据
+            if (!customDateRange) {
+                if (currentChartPeriod === 'week') {
+                    chartData = weightRecords.slice(-7);
+                } else if (currentChartPeriod === 'month') {
+                    chartData = weightRecords.slice(-30);
+                }
+            }
+
+            const labels = chartData.map(record => formatDate(record.date, 'short'));
+            const dataValues = chartData.map(record => record.weight);
+            const initialWeightLine = Array(chartData.length).fill(userSettings.initial_weight);
+            const targetWeightLine = Array(chartData.length).fill(userSettings.target_weight);
+
+            // 根据主题选择颜色
+            const isDark = document.body.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(71, 85, 105, 0.3)' : 'rgba(107, 114, 128, 0.1)';
+            const textColor = isDark ? '#94a3b8' : '#6B7280';
+
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: translations[currentLanguage]['weight'] || 'Weight',
+                        data: dataValues,
+                        borderColor: '#3B82F6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#3B82F6',
+                        pointBorderColor: isDark ? '#1e293b' : '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }, {
+                        label: translations[currentLanguage]['initial_weight'] || 'Initial Weight',
+                        data: initialWeightLine,
+                        borderColor: '#EF4444',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }, {
+                        label: translations[currentLanguage]['target_weight'] || 'Target Weight',
+                        data: targetWeightLine,
+                        borderColor: '#10B981',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                color: textColor
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#3B82F6',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const unit = currentLanguage === 'en' ? 'lbs' : '斤';
+                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + ' ' + unit;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                callback: function(value) {
+                                    const unit = currentLanguage === 'en' ? 'lbs' : '斤';
+                                    return value + ' ' + unit;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    animations: {
+                        tension: {
+                            duration: 1000,
+                            easing: 'linear'
+                        }
+                    }
+                }
+            });
+        }
+
+        function initializeWeeklyChart() {
+            const ctx = document.getElementById('weeklyChart').getContext('2d');
+            
+            if (weeklyChart) {
+                weeklyChart.destroy();
+            }
+
+            const weeklyData = calculateWeeklyStats();
+            const labels = weeklyData.map(item => `${translations[currentLanguage]['week'] || 'Week'} ${item.week}`);
+            const dataValues = weeklyData.map(item => item.lost);
+
+            // 根据主题选择颜色
+            const isDark = document.body.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(71, 85, 105, 0.3)' : 'rgba(107, 114, 128, 0.1)';
+            const textColor = isDark ? '#94a3b8' : '#6B7280';
+
+            weeklyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: translations[currentLanguage]['weekly_weight_loss'] || 'Weekly Weight Loss',
+                        data: dataValues,
+                        backgroundColor: dataValues.map(value => 
+                            value > 0 ? 'rgba(16, 185, 129, 0.8)' : 
+                            value < 0 ? 'rgba(239, 68, 68, 0.8)' : 
+                            'rgba(245, 158, 11, 0.8)'
+                        ),
+                        borderColor: dataValues.map(value => 
+                            value > 0 ? '#10B981' : 
+                            value < 0 ? '#EF4444' : 
+                            '#F59E0B'
+                        ),
+                        borderWidth: 2,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.9)' : 'rgba(0, 0, 0, 0.8)',
+                            titleColor: '#ffffff',
+                            bodyColor: '#ffffff',
+                            borderColor: '#10B981',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.y;
+                                    const unit = currentLanguage === 'en' ? 'lbs' : '斤';
+                                    return value > 0 ? translations[currentLanguage]['weight_lost'] + ': ' + value.toFixed(1) + ' ' + unit : 
+                                           value < 0 ? translations[currentLanguage]['weight_gained'] + ': ' + Math.abs(value).toFixed(1) + ' ' + unit : 
+                                           translations[currentLanguage]['no_change'] || 'No Change';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: textColor
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: gridColor
+                            },
+                            ticks: {
+                                color: textColor,
+                                callback: function(value) {
+                                    const unit = currentLanguage === 'en' ? 'lbs' : '斤';
+                                    return value + ' ' + unit;
+                                }
+                            }
+                        }
+                    },
+                    animations: {
+                        bar: {
+                            duration: 1000,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                }
+            });
+        }
+
+        function changeChartPeriod(period) {
+            currentChartPeriod = period;
+            customDateRange = false;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                btn.classList.remove('bg-primary', 'text-white');
+                btn.classList.add('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-gray-300');
+            });
+            
+            event.target.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-slate-700', 'dark:text-gray-300');
+            event.target.classList.add('bg-primary', 'text-white');
+            
+            initializeWeightChart();
+        }
+
+        // 记录页面初始化
+        function initializeRecordPage() {
+            updateTodayDate();
+            updateQuickStats();
+            
+            // 清空表单
+            document.getElementById('weight-input').value = '';
+            document.getElementById('feeling-select').value = '';
+            document.getElementById('notes-input').value = '';
+            
+            // 聚焦到体重输入框
+            setTimeout(() => {
+                document.getElementById('weight-input').focus();
+            }, 100);
+        }
+
+        async function recordWeight() {
+            const weight = parseFloat(document.getElementById('weight-input').value);
+            const feeling = document.getElementById('feeling-select').value;
+            const notes = document.getElementById('notes-input').value;
+            const today = new Date().toISOString().split('T')[0];
+
+            if (isNaN(weight) || weight <= 0) {
+                showNotification(translations[currentLanguage]['error'] || 'Error', 
+                                translations[currentLanguage]['please_enter_valid_weight'] || 'Please enter valid weight', 'error');
+                return;
+            }
+
+            try {
+                await apiRequest('/api/records', 'POST', {
+                    date: today,
+                    weight: weight,
+                    feeling: feeling,
+                    notes: notes
+                });
+
+                showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                translations[currentLanguage]['weight_recorded_successfully'] || 'Weight recorded successfully');
+                
+                // 重新加载数据
+                await loadRecords();
+                updateQuickStats();
+                updateDashboardStats();
+                updateRecentRecords();
+                initializeCharts();
+                filterRecords();
+                
+                // 自动跳转到仪表盘
+                setTimeout(() => {
+                    showSection('dashboard');
+                }, 1500);
+            } catch (error) {
+                console.error('记录失败:', error);
+            }
+        }
+
+        function updateTodayDate() {
+            const today = new Date();
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric', 
+                weekday: 'long',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            document.getElementById('today-date').textContent = today.toLocaleDateString(currentLanguage, options);
+            document.getElementById('current-date').textContent = formatDate(today.toISOString().split('T')[0]);
+        }
+
+        async function updateQuickStats() {
+            try {
+                const stats = await loadStats();
+                
+                if (stats) {
+                    document.getElementById('quick-current').textContent = stats.current_weight.toFixed(1);
+                    document.getElementById('quick-total-lost').textContent = stats.total_lost.toFixed(1);
+                    document.getElementById('quick-remaining').textContent = stats.remaining.toFixed(1);
+                }
+            } catch (error) {
+                console.error('快速统计更新失败:', error);
+            }
+        }
+
+        // 历史记录页面初始化
+        function initializeHistoryPage() {
+            updateHistoryStats();
+            filterRecords();
+        }
+
+        async function updateHistoryStats() {
+            try {
+                const stats = await loadStats();
+                
+                if (stats) {
+                    document.getElementById('history-total-days').textContent = stats.total_days;
+                    document.getElementById('history-total-lost').textContent = stats.total_lost.toFixed(1);
+                    document.getElementById('history-best-week').textContent = stats.best_week.toFixed(1);
+                    document.getElementById('history-current-streak').textContent = stats.streak;
+                }
+            } catch (error) {
+                console.error('历史统计更新失败:', error);
+            }
+        }
+
+        function filterRecords() {
+            const dateFilter = document.getElementById('date-filter').value;
+            const sortFilter = document.getElementById('sort-filter').value;
+            const searchNotes = document.getElementById('search-notes').value.toLowerCase();
+
+            let filteredRecords = [...weightRecords];
+
+            // 日期筛选
+            if (dateFilter !== 'all') {
+                const today = new Date();
+                let cutoffDate;
+                
+                switch (dateFilter) {
+                    case 'week':
+                        cutoffDate = new Date(today.setDate(today.getDate() - 7));
+                        break;
+                    case 'month':
+                        cutoffDate = new Date(today.setMonth(today.getMonth() - 1));
+                        break;
+                    case 'quarter':
+                        cutoffDate = new Date(today.setMonth(today.getMonth() - 3));
+                        break;
+                    case 'year':
+                        cutoffDate = new Date(today.setFullYear(today.getFullYear() - 1));
+                        break;
+                }
+                
+                filteredRecords = filteredRecords.filter(record => 
+                    new Date(record.date) >= cutoffDate
+                );
+            }
+
+            // 搜索筛选
+            if (searchNotes) {
+                filteredRecords = filteredRecords.filter(record => 
+                    record.notes && record.notes.toLowerCase().includes(searchNotes)
+                );
+            }
+
+            // 排序
+            switch (sortFilter) {
+                case 'newest':
+                    filteredRecords.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    break;
+                case 'oldest':
+                    filteredRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+                    break;
+                case 'highest':
+                    filteredRecords.sort((a, b) => b.weight - a.weight);
+                    break;
+                case 'lowest':
+                    filteredRecords.sort((a, b) => a.weight - b.weight);
+                    break;
+            }
+
+            displayHistoryRecords(filteredRecords);
+        }
+
+        function displayHistoryRecords(records) {
+            const container = document.getElementById('history-records');
+            const noRecords = document.getElementById('no-records');
+            
+            container.innerHTML = '';
+            
+            if (records.length === 0) {
+                noRecords.classList.remove('hidden');
+                return;
+            }
+            
+            noRecords.classList.add('hidden');
+
+            records.forEach((record, index) => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors';
+                
+                const previousRecord = weightRecords[weightRecords.findIndex(r => r.date === record.date) - 1];
+                const change = previousRecord ? record.weight - previousRecord.weight : 0;
+                
+                const feelingIcon = getFeelingIcon(record.feeling);
+
+                row.innerHTML = `
+                    <td class="py-4 px-6 text-sm text-gray-900 dark:text-white">${formatDate(record.date)}</td>
+                    <td class="py-4 px-6 text-sm font-medium text-gray-900 dark:text-white">${record.weight.toFixed(1)}</td>
+                    <td class="py-4 px-6 text-sm">
+                        <span class="${change < 0 ? 'text-secondary' : change > 0 ? 'text-danger' : 'text-gray-500 dark:text-gray-400'}">
+                            ${change < 0 ? '↓ ' + Math.abs(change).toFixed(1) : change > 0 ? '↑ ' + change.toFixed(1) : '→ 0'}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-gray-500 dark:text-gray-400">${calculateBMI(record.weight).toFixed(1)}</td>
+                    <td class="py-4 px-6 text-sm">
+                        ${feelingIcon}
+                    </td>
+                    <td class="py-4 px-6 text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate" title="${record.notes || '-'}">
+                        ${record.notes || '-'}
+                    </td>
+                    <td class="py-4 px-6 text-sm">
+                        <button onclick="editRecord('${record.date}')" class="text-primary hover:text-primary/80 mr-3">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button onclick="deleteRecord('${record.date}')" class="text-danger hover:text-danger/80">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                
+                container.appendChild(row);
+            });
+        }
+
+        // 设置页面初始化
+        function initializeSettingsPage() {
+            // 已经在updateFormFields中处理
+        }
+
+        async function updateSettings() {
+            const settingsData = {
+                height: parseFloat(document.getElementById('height-input').value) || 170,
+                gender: document.getElementById('gender-select').value,
+                initial_weight: parseFloat(document.getElementById('initial-weight-input').value) || 210,
+                target_weight: parseFloat(document.getElementById('target-weight-input').value) || 135,
+                target_months: parseInt(document.getElementById('target-date-select').value) || 6,
+                reminder_enabled: userSettings.reminderEnabled,
+                reminder_time: userSettings.reminderTime
+            };
+
+            try {
+                await apiRequest('/api/settings', 'PUT', settingsData);
+                userSettings = { ...userSettings, ...settingsData };
+                
+                showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                translations[currentLanguage]['settings_updated_successfully'] || 'Settings updated successfully');
+                
+                // 更新相关页面的数据
+                if (document.getElementById('dashboard').classList.contains('hidden') === false) {
+                    updateDashboardStats();
+                    initializeCharts();
+                }
+            } catch (error) {
+                console.error('设置更新失败:', error);
+            }
+        }
+
+        function toggleReminder() {
+            userSettings.reminderEnabled = !userSettings.reminderEnabled;
+            updateReminderToggle();
+            
+            if (userSettings.reminderEnabled) {
+                document.getElementById('reminder-time-container').classList.remove('hidden');
+            } else {
+                document.getElementById('reminder-time-container').classList.add('hidden');
+            }
+            
+            // 延迟保存，避免频繁请求
+            setTimeout(updateSettings, 1000);
+        }
+
+        function updateReminderToggle() {
+            const toggle = document.getElementById('reminder-toggle');
+            const toggleCircle = toggle.querySelector('div');
+            const isDark = document.body.classList.contains('dark');
+            
+            toggle.classList.remove('bg-gray-200', 'bg-primary', 'dark:bg-slate-700');
+            
+            if (userSettings.reminderEnabled) {
+                toggle.classList.add('bg-primary');
+                toggleCircle.classList.remove('left-1');
+                toggleCircle.classList.add('left-7');
+            } else {
+                toggle.classList.add(isDark ? 'dark:bg-slate-700' : 'bg-gray-200');
+                toggleCircle.classList.remove('left-7');
+                toggleCircle.classList.add('left-1');
+            }
+        }
+
+        // 数据管理功能
+        async function exportData() {
+            try {
+                const response = await apiRequest('/api/backup');
+                const backupData = response.backupData;
+                
+                const blob = new Blob([backupData], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const unit = currentLanguage === 'en' ? 'lbs' : '斤';
+                a.href = url;
+                a.download = `weight-tracker-backup-${currentUsername}-${new Date().toLocaleDateString()}-${unit}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                translations[currentLanguage]['data_exported_successfully'] || 'Data exported successfully');
+            } catch (error) {
+                console.error('导出失败:', error);
+            }
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    try {
+                        await apiRequest('/api/restore', 'POST', {
+                            backupData: e.target.result
+                        });
+                        
+                        showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                        translations[currentLanguage]['data_restored_successfully'] || 'Data restored successfully');
+                        
+                        // 重新加载所有数据
+                        await loadAllData();
+                    } catch (error) {
+                        showNotification(translations[currentLanguage]['error'] || 'Error', 
+                                        translations[currentLanguage]['restore_failed_check_file_format'] || 'Restore failed, please check file format', 'error');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+
+        async function cloudBackup() {
+            try {
+                await apiRequest('/api/backup');
+                showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                translations[currentLanguage]['cloud_backup_created'] || 'Cloud backup created successfully');
+            } catch (error) {
+                console.error('云端备份失败:', error);
+            }
+        }
+
+        async function editRecord(date) {
+            const record = weightRecords.find(r => r.date === date);
+            if (!record) return;
+            
+            showSection('record');
+            
+            setTimeout(() => {
+                document.getElementById('weight-input').value = record.weight;
+                document.getElementById('feeling-select').value = record.feeling || '';
+                document.getElementById('notes-input').value = record.notes || '';
+            }, 100);
+        }
+
+        async function deleteRecord(date) {
+            if (confirm(translations[currentLanguage]['confirm_delete_record'] || 'Are you sure you want to delete this record?')) {
+                try {
+                    await apiRequest(`/api/records/${date}`, 'DELETE');
+                    
+                    // 重新加载数据
+                    await loadRecords();
+                    showNotification(translations[currentLanguage]['success'] || 'Success', 
+                                    translations[currentLanguage]['record_deleted_successfully'] || 'Record deleted successfully');
+                    filterRecords();
+                    updateHistoryStats();
+                    updateDashboardStats();
+                    updateRecentRecords();
+                    initializeCharts();
+                } catch (error) {
+                    console.error('删除失败:', error);
+                }
+            }
+        }
+
+        // 工具函数
+        function calculateBMI(weight) {
+            const heightM = userSettings.height / 100;
+            return weight / 2 / (heightM * heightM); // 转换为公斤
+        }
+
+        function calculateWeeklyStats() {
+            if (weightRecords.length < 2) return [];
+            
+            const weeklyStats = [];
+            let weekNumber = 1;
+            
+            for (let i = 0; i < weightRecords.length; i += 7) {
+                const weekRecords = weightRecords.slice(i, i + 7);
+                const firstWeight = weekRecords[0].weight;
+                const lastWeight = weekRecords[weekRecords.length - 1].weight;
+                const lost = firstWeight - lastWeight;
+                
+                weeklyStats.push({
+                    week: weekNumber++,
+                    lost: parseFloat(lost.toFixed(1))
+                });
+            }
+            
+            return weeklyStats;
+        }
+
+        function formatDate(dateString, format = 'full') {
+            const date = new Date(dateString);
+            
+            if (format === 'short') {
+                if (currentLanguage === 'en') {
+                    return date.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric' });
+                } else if (currentLanguage === 'zh-TW') {
+                    return date.toLocaleDateString('zh-TW', { month: 'numeric', day: 'numeric' });
+                } else {
+                    return date.toLocaleDateString('zh-CN', { month: 'numeric', day: 'numeric' });
+                }
+            }
+            
+            const options = { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric'
+            };
+            
+            if (currentLanguage === 'en') {
+                return date.toLocaleDateString('en-US', options);
+            } else if (currentLanguage === 'zh-TW') {
+                return date.toLocaleDateString('zh-TW', options);
+            } else {
+                return date.toLocaleDateString('zh-CN', options);
+            }
+        }
+
+        function getFeelingIcon(feeling) {
+            switch (feeling) {
+                case 'great': return '<i class="fa fa-smile-o text-yellow-500"></i> ' + (translations[currentLanguage]['feeling_great'] || 'Great');
+                case 'good': return '<i class="fa fa-smile-o text-green-500"></i> ' + (translations[currentLanguage]['feeling_good'] || 'Good');
+                case 'normal': return '<i class="fa fa-meh-o text-gray-500"></i> ' + (translations[currentLanguage]['feeling_normal'] || 'Normal');
+                case 'tired': return '<i class="fa fa-frown-o text-blue-500"></i> ' + (translations[currentLanguage]['feeling_tired'] || 'Tired');
+                case 'hungry': return '<i class="fa fa-cutlery text-orange-500"></i> ' + (translations[currentLanguage]['feeling_hungry'] || 'Hungry');
+                default: return '-';
+            }
+        }
+
+        function showNotification(title, message, type = 'success') {
+            const notification = document.getElementById('notification');
+            const titleElement = document.getElementById('notification-title');
+            const messageElement = document.getElementById('notification-message');
+            
+            titleElement.textContent = title;
+            messageElement.textContent = message;
+            
+            // 设置颜色
+            notification.className = notification.className.replace(/border-\w+/g, '');
+            notification.classList.add('border-' + (type === 'success' ? 'primary' : 'danger'));
+            
+            // 显示通知
+            notification.style.transform = 'translateX(0)';
+            
+            // 3秒后隐藏
+            setTimeout(() => {
+                notification.style.transform = 'translateX(100%)';
+            }, 3000);
+        }
+
+        function showAbout() {
+            const isDark = document.body.classList.contains('dark');
+            showModal(translations[currentLanguage]['about_app'] || 'About Weight Loss Tracker', `
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center mx-auto">
+                        <i class="fa fa-heartbeat text-white text-2xl"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-900 dark:text-white">Weight Loss Tracker v1.0.0</h4>
+                    <p class="text-gray-600 dark:text-gray-400">${translations[currentLanguage]['cloud_sync_version'] || 'Cloud Sync Version'} - ${translations[currentLanguage]['professional_weight_loss_tracker'] || 'Professional Weight Loss Tracking Tool'}</p>
+                    <div class="border-t border-gray-200 dark:border-slate-700 pt-4 text-sm text-gray-500 dark:text-gray-400">
+                        <p>© 2025 ${translations[currentLanguage]['weight_loss_tracker'] || 'Weight Loss Tracker'}. ${translations[currentLanguage]['data_securely_stored_on_server'] || 'Data securely stored on server.'}</p>
+                        <p class="mt-2">${translations[currentLanguage]['this_app_is_for_reference_only'] || 'This app is for reference only, please consult a professional doctor for specific weight loss plans.'}</p>
+                    </div>
+                    <div class="pt-4">
+                        <a href="https://github.com/zzzerol/weight-tracker" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-2 text-primary hover:text-primary/80 font-medium">
+                            <i class="fa fa-github"></i>
+                            <span>${translations[currentLanguage]['view_on_github'] || 'View on GitHub'}</span>
+                        </a>
+                    </div>
+                </div>
+            `);
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = content;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        function handleScroll() {
+            // 可以添加滚动时的动画效果
+        }
+
+        // 点击模态框外部关闭
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+                closeAuthModal();
+            }
+        });
+
+        // 自动刷新数据
+        setInterval(async () => {
+            if (authToken) {
+                try {
+                    await loadRecords();
+                    updateDashboardStats();
+                    updateRecentRecords();
+                    if (!customDateRange) {
+                        initializeCharts();
+                    }
+                    filterRecords();
+                } catch (error) {
+                    console.error('自动刷新失败:', error);
+                }
+            }
+        }, 300000); // 每5分钟自动刷新一次
+    </script>
+</body>
+</html>
